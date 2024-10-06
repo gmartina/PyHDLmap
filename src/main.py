@@ -99,6 +99,51 @@ def generate_register_map(json_file_path):
             # Write end of header guard
             header_file.write(f"#endif // {header_guard}\n")
 
+def generate_register_map_source(json_file_path):
+    # Load the JSON file
+    with open(json_file_path, 'r') as json_file:
+        register_maps = json.load(json_file).get("register_maps", [])
+
+    # Generate one source file per register map
+    for register_map in register_maps:
+        map_name = register_map.get("name", "UNKNOWN_MAP")
+        registers = register_map.get("registers", [])
+
+        output_file_path = f"{map_name.lower()}_register_map.c"
+        with open(output_file_path, 'w') as source_file:
+            # Include the corresponding header file
+            source_file.write(f"#include \"{map_name.lower()}_register_map.h\"\n\n")
+          
+            # Write preprocessor directives to read/write each bitfield
+            for reg in registers:
+                reg_name = reg.get("name", "UNKNOWN_REG")
+                offset = reg.get("offset", "0x00")
+                access = reg.get("access", "read-write")
+                bitfields = reg.get("bitfields", [])
+
+                address_macro = f"{map_name}_{reg_name}_ADDRESS"
+
+                for bitfield in bitfields:
+                    bf_name = bitfield.get("name", "UNKNOWN_BF")
+                    bitshift = bitfield.get("bitshift", 0)
+                    bitwidth = bitfield.get("bitwidth", 1)
+                    bf_mask = ((1 << bitwidth) - 1) << bitshift
+
+                    # Read macro
+                    source_file.write(f"// Bitfield: {bf_name}\n")
+                    source_file.write(f"#define {map_name}_{reg_name}_{bf_name}_READ() \
+    ((*((volatile unsigned int*){address_macro}) & {map_name}_{reg_name}_{bf_name}_MASK) >> {map_name}_{reg_name}_{bf_name}_BITSHIFT)\n")
+
+                    # Write macro (only if the access is read-write or write-only)
+                    if access in ["read-write", "write-only"]:
+                        source_file.write(f"#define {map_name}_{reg_name}_{bf_name}_WRITE(value) \
+    do {{ \
+        unsigned int reg_value = *((volatile unsigned int*){address_macro}); \
+        reg_value &= ~{map_name}_{reg_name}_{bf_name}_MASK; \
+        reg_value |= ((value << {map_name}_{reg_name}_{bf_name}_BITSHIFT) & {map_name}_{reg_name}_{bf_name}_MASK); \
+        *((volatile unsigned int*){address_macro}) = reg_value; \
+    }} while (0)\n\n")
+
 def generate_register_map_markdown(json_file_path, output_file_path):
     # Load the JSON file
     with open(json_file_path, 'r') as json_file:
@@ -155,6 +200,9 @@ if __name__ == "__main__":
 
     generate_register_map(json_file_path)
     print(f"Register map header files generated.")
+
+    generate_register_map_source(json_file_path)
+    print(f"Register map source files generated.")
 
     generate_register_map_markdown(json_file_path, output_markdown_path)
     print(f"Register map markdown documentation generated: {output_markdown_path}")
