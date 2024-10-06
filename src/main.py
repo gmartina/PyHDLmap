@@ -193,10 +193,52 @@ def generate_register_map_markdown(json_file_path, output_file_path):
                                 markdown_file.write(f"    - `{enum_name}`: `{enum_value}`\n")
                         markdown_file.write(f"\n")
 
+def json_sanity_check(json_file_path):
+    # Load the JSON file
+    with open(json_file_path, 'r') as json_file:
+        register_maps = json.load(json_file).get("register_maps", [])
+
+    for register_map in register_maps:
+        base_address = int(register_map.get("base_address", "0x00000000"), 16)
+        registers = register_map.get("registers", [])
+
+        # Check for overlapping register offsets
+        register_addresses = set()
+        for reg in registers:
+            reg_name = reg.get("name", "UNKNOWN_REG")
+            offset = int(reg.get("offset", "0x00"), 16)
+            reg_address = base_address + offset
+
+            if reg_address in register_addresses:
+                raise ValueError(f"Overlap detected in register map '{register_map.get('name', 'UNKNOWN_MAP')}' at register '{reg_name}' with address 0x{reg_address:X}")
+            register_addresses.add(reg_address)
+
+            # Check for overlapping bitfields
+            bitfield_ranges = set()
+            bitfields = reg.get("bitfields", [])
+            for bitfield in bitfields:
+                bf_name = bitfield.get("name", "UNKNOWN_BF")
+                bitshift = bitfield.get("bitshift", 0)
+                bitwidth = bitfield.get("bitwidth", 1)
+                bit_range = range(bitshift, bitshift + bitwidth)
+
+                for bit in bit_range:
+                    if bit in bitfield_ranges:
+                        raise ValueError(f"Overlap detected in register '{reg_name}' bitfield '{bf_name}' in register map '{register_map.get('name', 'UNKNOWN_MAP')}'")
+                    bitfield_ranges.add(bit)
+
 if __name__ == "__main__":
     # Example usage
     json_file_path = "register_map.json"  # Path to the input JSON file
     output_markdown_path = "register_map.md"  # Path to the output markdown file
+
+    # Sanity check the JSON
+    try:
+        json_sanity_check(json_file_path)
+        print(f"JSON sanity check passed.")
+    except ValueError as e:
+        print(f"Sanity check failed: {e}")
+        exit(1)
 
     generate_register_map(json_file_path)
     print(f"Register map header files generated.")
