@@ -1,0 +1,40 @@
+{
+    "register_maps": [
+        {
+            "name": "MAP1",
+            "description": "First register map",
+            "base_address": "0x40000000",
+            "registers": [
+                {
+                    "name": "CONTROL_REG",
+                    "offset": "0x00",
+                    "bitfields": [
+                        {"name": "ENABLE", "bitshift": 0, "bitwidth": 1, "description": "Enable control"},
+                        {"name": "MODE", "bitshift": 1, "bitwidth": 3, "description": "Mode selection"}
+                    ]
+                },
+                {
+                    "name": "STATUS_REG",
+                    "offset": "0x04",
+                    "bitfields": [
+                        {"name": "READY", "bitshift": 0, "bitwidth": 1, "description": "Ready status"}
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "MAP2",
+            "description": "Second register map",
+            "base_address": "0x50000000",
+            "registers": [
+                {
+                    "name": "CONFIG_REG",
+                    "offset": "0x00",
+                    "bitfields": [
+                        {"name": "CONFIG", "bitshift": 0, "bitwidth": 4, "description": "Configuration settings"}
+                    ]
+                }
+            ]
+        }
+    ]
+}
