@@ -23,7 +23,7 @@ import os
 #                     "offset": "0x04",
 #                     "access": "read-only",
 #                     "bitfields": [
-#                         {"name": "READY", "bitshift": 0, "bitwidth": 1, "description": "Ready status", "default_value": 0}
+#                         {"name": "READY", "bitshift": 0, "bitwidth": 1, "description": "Ready status", "default_value": 0, "enum": {"OFF": 0, "ON": 1}}
 #                     ]
 #                 }
 #             ]
@@ -89,12 +89,18 @@ def generate_register_map(json_file_path):
                     bf_description = bitfield.get("description", "No description available")
                     bf_default_value = bitfield.get("default_value", 0)
                     bf_mask = ((1 << bitwidth) - 1) << bitshift
+                    bf_enum = bitfield.get("enum", None)
 
                     header_file.write(f"// Bitfield: {bf_name} ({bf_description})\n")
                     header_file.write(f"#define {map_name}_{reg_name}_{bf_name}_BITSHIFT ({bitshift})\n")
                     header_file.write(f"#define {map_name}_{reg_name}_{bf_name}_BITWIDTH ({bitwidth})\n")
                     header_file.write(f"#define {map_name}_{reg_name}_{bf_name}_DEFAULT_VALUE ({bf_default_value})\n")
                     header_file.write(f"#define {map_name}_{reg_name}_{bf_name}_MASK (0x{bf_mask:X})\n")
+
+                    # Write ENUM definitions if available
+                    if bf_enum:
+                        for enum_name, enum_value in bf_enum.items():
+                            header_file.write(f"#define {map_name}_{reg_name}_{bf_name}_{enum_name} ({enum_value})\n")
 
                     # Read macro
                     header_file.write(f"#define {map_name}_{reg_name}_{bf_name}_READ() \
@@ -172,12 +178,20 @@ def generate_register_map_markdown(json_file_path, output_file_path):
                         bf_description = bitfield.get("description", "No description available")
                         bf_default_value = bitfield.get("default_value", 0)
                         bf_mask = ((1 << bitwidth) - 1) << bitshift
+                        bf_enum = bitfield.get("enum", None)
 
                         markdown_file.write(f"- **{bf_name}**: {bf_description}\n")
                         markdown_file.write(f"  - **Bitshift**: `{bitshift}`\n")
                         markdown_file.write(f"  - **Bitwidth**: `{bitwidth}`\n")
                         markdown_file.write(f"  - **Default Value**: `{bf_default_value}`\n")
-                        markdown_file.write(f"  - **Bit Mask**: `0x{bf_mask:X}`\n\n")
+                        markdown_file.write(f"  - **Bit Mask**: `0x{bf_mask:X}`\n")
+
+                        # Write ENUM values if available
+                        if bf_enum:
+                            markdown_file.write(f"  - **Enum Values**:\n")
+                            for enum_name, enum_value in bf_enum.items():
+                                markdown_file.write(f"    - `{enum_name}`: `{enum_value}`\n")
+                        markdown_file.write(f"\n")
 
 if __name__ == "__main__":
     # Example usage
